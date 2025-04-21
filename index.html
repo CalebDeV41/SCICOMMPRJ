@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>3D Graph with Sliders</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <!-- Three.js -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- dat.GUI for sliders -->
+  <script src="https://cdn.jsdelivr.net/npm/dat.gui/build/dat.gui.min.js"></script>
+
+  <script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 40);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    const params = { R: 5, M: 2 };
+    let mesh;
+
+    function generateSurface(R, M) {
+      const geometry = new THREE.PlaneGeometry(40, 40, 100, 100);
+      const posAttr = geometry.attributes.position;
+
+      for (let i = 0; i < posAttr.count; i++) {
+        const x = posAttr.getX(i);
+        const y = posAttr.getY(i);
+        const denom = (x**2 + y**3)/(R**2) + M;
+        const z = -1 / denom;
+        posAttr.setZ(i, z);
+      }
+
+      posAttr.needsUpdate = true;
+      geometry.computeVertexNormals();
+
+      const material = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide, flatShading: true });
+      return new THREE.Mesh(geometry, material);
+    }
+
+    function updateSurface() {
+      if (mesh) {
+        scene.remove(mesh);
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+      }
+      mesh = generateSurface(params.R, params.M);
+      scene.add(mesh);
+    }
+
+    updateSurface();
+
+    const gui = new dat.GUI();
+    gui.add(params, 'R', 1, 10).onChange(updateSurface);
+    gui.add(params, 'M', 0.1, 10).onChange(updateSurface);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
