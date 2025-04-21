@@ -18,12 +18,17 @@ const params = {
 // Function to generate geometry
 function generateSurface(R, M) {
   const geometry = new THREE.PlaneGeometry(40, 40, 100, 100);
-  geometry.vertices.forEach(v => {
-    const x = v.x;
-    const y = v.y;
+  const positionAttr = geometry.attributes.position;
+  
+  for (let i = 0; i < positionAttr.count; i++) {
+    const x = positionAttr.getX(i);
+    const y = positionAttr.getY(i);
     const denom = (x**2 + y**3)/(R**2) + M;
-    v.z = -1 / denom;
-  });
+    const z = -1 / denom;
+    positionAttr.setZ(i, z);
+  }
+
+  positionAttr.needsUpdate = true;
   geometry.computeVertexNormals();
   return geometry;
 }
