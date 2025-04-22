@@ -43,7 +43,7 @@
       for (let i = 0; i < posAttr.count; i++) {
         const x = posAttr.getX(i);
         const y = posAttr.getY(i);
-        const denom = (x**2 + y**2)/(R**2) + 2/M;
+        const denom = (x**2 + y**2)/(R**2) + 2/(Math.sqrt(M));
         const z = -1 / denom;
         posAttr.setZ(i, z);
       }
@@ -93,7 +93,7 @@
 
     const gui = new GUI();
     gui.add(params, 'R', 1, 1000).onChange(updateSurface);
-    gui.add(params, 'M', 1, 10000).onChange(updateSurface);
+    gui.add(params, 'M', 250, 10000).onChange(updateSurface);
 
     function animate() {
       requestAnimationFrame(animate);
