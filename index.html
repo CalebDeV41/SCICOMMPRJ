@@ -28,9 +28,9 @@
     controls.enableDamping = true;
 
     const sphereGeom = new THREE.SphereGeometry(1, 64, 64);
-    const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+    const sphereMat = new THREE.MeshBasicMaterial({color: 0xff0000, roughness: 0.5, metalness: 0.1});
     const sphere = new THREE.Mesh(sphereGeom, sphereMat);
-    sphere.position.set(0, 0, 6);
+    sphere.position.set(0, 0, 10);
     scene.add(sphere);
 
     const params = { R: 6, M: 25 };
@@ -85,7 +85,7 @@
       wireMesh = wire;
       scene.add(surfaceMesh);
       scene.add(wireMesh);
-      const scaleFactor = 5*Math.sqrt(params.R + 1);
+      const scaleFactor = Math.sqrt(params.R + 1);
       sphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
     }
 
