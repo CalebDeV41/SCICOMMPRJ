@@ -27,11 +27,17 @@
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
-    const params = { R: 5, M: 5 };
+    const sphereGeom = new THREE.SphereGeometry(1, 64, 64);
+    const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+    const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+    sphere.position.set(0, 0, 10);
+    scene.add(sphere);
+
+    const params = { R: 6, M: 25 };
     let surfaceMesh, wireMesh;
 
     function generateSurface(R, M) {
-      const geometry = new THREE.PlaneGeometry(40, 40, 200, 200); // high res
+      const geometry = new THREE.PlaneGeometry(600, 600, 400, 400); // high res
       const posAttr = geometry.attributes.position;
 
       for (let i = 0; i < posAttr.count; i++) {
@@ -79,6 +85,8 @@
       wireMesh = wire;
       scene.add(surfaceMesh);
       scene.add(wireMesh);
+      const scaleFactor = Math.log(params.R + 1);
+      sphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
     }
 
     updateSurface();
