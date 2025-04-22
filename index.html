@@ -15,10 +15,10 @@
     import GUI from 'https://esm.run/lil-gui';
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000);
+    scene.background = new THREE.Color(0x000000); // Black background
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 0, 150);
+    camera.position.set(0, 0, 50);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -27,46 +27,41 @@
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
-    // Sphere representing the mass
     const sphereGeom = new THREE.SphereGeometry(1, 64, 64);
-    const sphereMat = new THREE.MeshStandardMaterial({color: 0xff0000, roughness: 0.5, metalness: 0.1});
+    const sphereMat = new THREE.MeshBasicMaterial({color: 0xff0000, roughness: 0.5, metalness: 0.1});
     const sphere = new THREE.Mesh(sphereGeom, sphereMat);
     sphere.position.set(0, 0, 10);
     scene.add(sphere);
 
-    // Add lighting for standard material
-    const light = new THREE.PointLight(0xffffff, 1);
-    light.position.set(100, 100, 200);
-    scene.add(light);
-    scene.add(new THREE.AmbientLight(0x404040));
-
-    // Constants
-    const c = 3e8;
-    const G = 6.67430e-11;
-    const K = (8 * Math.PI * G) / (3 * c**2);  // Compactness factor
-
-    const params = { R: 6e6, rho: 5000 };  // R in meters, rho in kg/m³
+    const params = { R: 6, M: 25 };
     let surfaceMesh, wireMesh;
 
-    function generateSurface(R, rho) {
-      const geometry = new THREE.PlaneGeometry(400, 400, 400, 400);
-
-      const compactness = Math.min(K * rho * R * R, 0.999);
+    function generateSurface(R, M) {
+      const geometry = new THREE.PlaneGeometry(400, 400, 400, 400); // high res
       const posAttr = geometry.attributes.position;
 
       for (let i = 0; i < posAttr.count; i++) {
         const x = posAttr.getX(i);
         const y = posAttr.getY(i);
-        const denom = (x**2 + y**2)/(R**2) + (1 - compactness);
-        const z = -5 / denom;
+        const denom = (x**2 + y**2)/(R**2) + R/100*(Math.sqrt(M));
+        const z = -1 / denom;
         posAttr.setZ(i, z);
       }
 
       posAttr.needsUpdate = true;
       geometry.computeVertexNormals();
 
-      const shadedMat = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide, flatShading: false });
-      const wireMat = new THREE.MeshBasicMaterial({ color: 0x222222, wireframe: true, opacity: 0.6, transparent: true });
+      const shadedMat = new THREE.MeshNormalMaterial({
+        side: THREE.DoubleSide,
+        flatShading: false,
+      });
+
+      const wireMat = new THREE.MeshBasicMaterial({
+        color: 0x222222,
+        wireframe: true,
+        opacity: 0.6,
+        transparent: true,
+      });
 
       const surface = new THREE.Mesh(geometry, shadedMat);
       const wire = new THREE.Mesh(geometry, wireMat);
@@ -85,32 +80,20 @@
         wireMesh.material.dispose();
       }
 
-      const { surface, wire } = generateSurface(params.R, params.rho);
+      const { surface, wire } = generateSurface(params.R, params.M);
       surfaceMesh = surface;
       wireMesh = wire;
       scene.add(surfaceMesh);
       scene.add(wireMesh);
-
-      const compactness = Math.min(K * params.rho * params.R * params.R, 0.999);
-      const scaleFactor = 1 + 20 * compactness;
+      const scaleFactor = Math.sqrt(params.R + 1);
       sphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
     }
 
-    const gui = new GUI();
-    const rController = gui.add(params, 'R', 1e3, 1e7).onChange(updateLimits);
-    const rhoController = gui.add(params, 'rho', 1, 1e5).onChange(updateSurface);
-
-    function updateLimits() {
-      const rhoMax = (0.999) / (K * params.R**2);
-      rhoController.max(rhoMax);
-      if (params.rho > rhoMax) {
-        params.rho = rhoMax;
-        rhoController.setValue(rhoMax);
-      }
-      updateSurface();
-    }
-
     updateSurface();
+
+    const gui = new GUI();
+    gui.add(params, 'R', 1, 1000).onChange(updateSurface);
+    gui.add(params, 'M', 250, 10000).onChange(updateSurface);
 
     function animate() {
       requestAnimationFrame(animate);
