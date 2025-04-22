@@ -27,7 +27,7 @@
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
-    const params = { R: 5, M: 2 };
+    const params = { R: 5, M: 5 };
     let surfaceMesh, wireMesh;
 
     function generateSurface(R, M) {
@@ -37,7 +37,7 @@
       for (let i = 0; i < posAttr.count; i++) {
         const x = posAttr.getX(i);
         const y = posAttr.getY(i);
-        const denom = (x**2 + y**2)/(R**2) + M;
+        const denom = (x**2 + y**2)/(R**2) + 1/M;
         const z = -1 / denom;
         posAttr.setZ(i, z);
       }
@@ -84,8 +84,8 @@
     updateSurface();
 
     const gui = new GUI();
-    gui.add(params, 'R', 1, 10).onChange(updateSurface);
-    gui.add(params, 'M', 0.1, 10).onChange(updateSurface);
+    gui.add(params, 'R', 1, 100).onChange(updateSurface);
+    gui.add(params, 'M', 1, 1000).onChange(updateSurface);
 
     function animate() {
       requestAnimationFrame(animate);
