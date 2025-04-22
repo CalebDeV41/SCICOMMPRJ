@@ -85,7 +85,7 @@
       wireMesh = wire;
       scene.add(surfaceMesh);
       scene.add(wireMesh);
-      const scaleFactor = Math.log(params.R + 1);
+      const scaleFactor = 5*Math.sqrt(params.R + 1);
       sphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
     }
 
