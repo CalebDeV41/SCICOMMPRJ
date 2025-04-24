@@ -53,7 +53,7 @@
 
 function generateSurface(R, M) {
   // High-res smooth surface
-  const smoothGeometry = new THREE.PlaneGeometry(600, 600, 400, 400);
+  const smoothGeometry = new THREE.PlaneGeometry(500, 500, 400, 400);
   applyCurvature(smoothGeometry, R, M);
 
   const shadedMat = new THREE.MeshNormalMaterial({
@@ -63,7 +63,7 @@ function generateSurface(R, M) {
   const surface = new THREE.Mesh(smoothGeometry, shadedMat);
 
   // Low-res grid overlay
-  const gridGeometry = new THREE.PlaneGeometry(600, 600, 50, 50);
+  const gridGeometry = new THREE.PlaneGeometry(500, 500, 40, 40);
   applyCurvature(gridGeometry, R, M);
 
   const wireMat = new THREE.MeshBasicMaterial({
@@ -95,7 +95,7 @@ function updateSurface() {
   scene.add(surfaceMesh);
   scene.add(wireMesh);
 
-  const scaleFactor = Math.sqrt(2*params.R);
+  const scaleFactor = Math.sqrt(1.5*params.R);
   sphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
 }
 
