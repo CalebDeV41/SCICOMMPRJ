@@ -69,10 +69,10 @@
 
       // Two wireframes: above and below
       const wireAbove = new THREE.Mesh(gridGeometry.clone(), wireMat);
-      wireAbove.position.z = 0.01;
+      wireAbove.position.z = 0.5;
 
       const wireBelow = new THREE.Mesh(gridGeometry.clone(), wireMat);
-      wireBelow.position.z = -0.01;
+      wireBelow.position.z = -0.5;
 
       return { surface, wires: [wireAbove, wireBelow] };
     }
