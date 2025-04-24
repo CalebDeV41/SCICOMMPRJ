@@ -15,7 +15,7 @@
     import GUI from 'https://esm.run/lil-gui';
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000); // Black background
+    scene.background = new THREE.Color(0x000000);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 0, 50);
@@ -28,76 +28,80 @@
     controls.enableDamping = true;
 
     const sphereGeom = new THREE.SphereGeometry(1, 64, 64);
-    const sphereMat = new THREE.MeshBasicMaterial({color: 0xff0000, roughness: 0.5, metalness: 0.1});
+    const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
     const sphere = new THREE.Mesh(sphereGeom, sphereMat);
     sphere.position.set(0, 0, 8);
     scene.add(sphere);
 
     const params = { R: 60, M: 2500 };
-    let surfaceMesh, wireMesh;
+    let surfaceMesh, wireMeshes = [];
 
     function applyCurvature(geometry, R, M) {
-  const posAttr = geometry.attributes.position;
+      const posAttr = geometry.attributes.position;
+      for (let i = 0; i < posAttr.count; i++) {
+        const x = posAttr.getX(i);
+        const y = posAttr.getY(i);
+        const denom = (x**2 + y**2)/(R**2 + Math.sqrt(M)) + (Math.sqrt(R)/M);
+        const z = -1 / denom;
+        posAttr.setZ(i, z);
+      }
+      posAttr.needsUpdate = true;
+      geometry.computeVertexNormals();
+    }
 
-  for (let i = 0; i < posAttr.count; i++) {
-    const x = posAttr.getX(i);
-    const y = posAttr.getY(i);
-    const denom = (x**2 + y**2)/(R**2 + Math.sqrt(M)) + (Math.sqrt(R)/M);
-    const z = -1 / denom;
-    posAttr.setZ(i, z);
-  }
+    function generateSurface(R, M) {
+      // Smooth high-res surface
+      const smoothGeometry = new THREE.PlaneGeometry(500, 500, 400, 400);
+      applyCurvature(smoothGeometry, R, M);
+      const shadedMat = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide, flatShading: false });
+      const surface = new THREE.Mesh(smoothGeometry, shadedMat);
 
-  posAttr.needsUpdate = true;
-  geometry.computeVertexNormals();
-}
+      // Low-res grid geometry
+      const gridGeometry = new THREE.PlaneGeometry(500, 500, 40, 40);
+      applyCurvature(gridGeometry, R, M);
 
-function generateSurface(R, M) {
-  // High-res smooth surface
-  const smoothGeometry = new THREE.PlaneGeometry(500, 500, 400, 400);
-  applyCurvature(smoothGeometry, R, M);
+      const wireMat = new THREE.MeshBasicMaterial({
+        color: 0x222222,
+        wireframe: true,
+        opacity: 0.6,
+        transparent: true,
+      });
 
-  const shadedMat = new THREE.MeshNormalMaterial({
-    side: THREE.DoubleSide,
-    flatShading: false,
-  });
-  const surface = new THREE.Mesh(smoothGeometry, shadedMat);
+      // Two wireframes: above and below
+      const wireAbove = new THREE.Mesh(gridGeometry.clone(), wireMat);
+      wireAbove.position.z = 0.1;
 
-  // Low-res grid overlay
-  const gridGeometry = new THREE.PlaneGeometry(500, 500, 40, 40);
-  applyCurvature(gridGeometry, R, M);
+      const wireBelow = new THREE.Mesh(gridGeometry.clone(), wireMat);
+      wireBelow.position.z = -0.1;
 
-  const wireMat = new THREE.MeshBasicMaterial({
-    color: 0x222222,
-    wireframe: true,
-    opacity: 0.6,
-    transparent: true,
-  });
-  const wire = new THREE.Mesh(gridGeometry, wireMat);
+      return { surface, wires: [wireAbove, wireBelow] };
+    }
 
-  return { surface, wire };
-}
+    function updateSurface() {
+      if (surfaceMesh) {
+        scene.remove(surfaceMesh);
+        surfaceMesh.geometry.dispose();
+        surfaceMesh.material.dispose();
+      }
+      if (wireMeshes.length > 0) {
+        wireMeshes.forEach(mesh => {
+          scene.remove(mesh);
+          mesh.geometry.dispose();
+          mesh.material.dispose();
+        });
+        wireMeshes = [];
+      }
 
-function updateSurface() {
-  if (surfaceMesh) {
-    scene.remove(surfaceMesh);
-    surfaceMesh.geometry.dispose();
-    surfaceMesh.material.dispose();
-  }
-  if (wireMesh) {
-    scene.remove(wireMesh);
-    wireMesh.geometry.dispose();
-    wireMesh.material.dispose();
-  }
+      const { surface, wires } = generateSurface(params.R, params.M);
+      surfaceMesh = surface;
+      wireMeshes = wires;
 
-  const { surface, wire } = generateSurface(params.R, params.M);
-  surfaceMesh = surface;
-  wireMesh = wire;
-  scene.add(surfaceMesh);
-  scene.add(wireMesh);
+      scene.add(surfaceMesh);
+      wireMeshes.forEach(mesh => scene.add(mesh));
 
-  const scaleFactor = Math.sqrt(1.5*params.R);
-  sphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
-}
+      const scaleFactor = Math.sqrt(1.5 * params.R);
+      sphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    }
 
     updateSurface();
 
