@@ -51,31 +51,28 @@
   geometry.computeVertexNormals();
 }
 
-function generateSurface(R, M) {
-  // High-res smooth surface
-  const smoothGeometry = new THREE.PlaneGeometry(500, 500, 400, 400);
-  applyCurvature(smoothGeometry, R, M);
+// Low-res wireframe geometry for grid overlay
+const gridGeometry = new THREE.PlaneGeometry(400, 400, 50, 50);
+applyCurvature(gridGeometry, R, M);
 
-  const shadedMat = new THREE.MeshNormalMaterial({
-    side: THREE.DoubleSide,
-    flatShading: false,
-  });
-  const surface = new THREE.Mesh(smoothGeometry, shadedMat);
+// Wireframe material
+const wireMat = new THREE.MeshBasicMaterial({
+  color: 0x222222,
+  wireframe: true,
+  opacity: 0.6,
+  transparent: true,
+});
 
-  // Low-res grid overlay
-  const gridGeometry = new THREE.PlaneGeometry(500, 500, 40, 40);
-  applyCurvature(gridGeometry, R, M);
+// Upper wire mesh
+const wireAbove = new THREE.Mesh(gridGeometry.clone(), wireMat);
+wireAbove.position.z = 0.01;
 
-  const wireMat = new THREE.MeshBasicMaterial({
-    color: 0x222222,
-    wireframe: true,
-    opacity: 0.6,
-    transparent: true,
-  });
-  const wire = new THREE.Mesh(gridGeometry, wireMat);
+// Lower wire mesh
+const wireBelow = new THREE.Mesh(gridGeometry.clone(), wireMat);
+wireBelow.position.z = -0.01;
 
-  return { surface, wire };
-}
+// Return all 3 meshes
+return { surface, wires: [wireAbove, wireBelow] };
 
 function updateSurface() {
   if (surfaceMesh) {
@@ -83,19 +80,23 @@ function updateSurface() {
     surfaceMesh.geometry.dispose();
     surfaceMesh.material.dispose();
   }
+
   if (wireMesh) {
-    scene.remove(wireMesh);
-    wireMesh.geometry.dispose();
-    wireMesh.material.dispose();
+    for (const mesh of wireMesh) {
+      scene.remove(mesh);
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    }
   }
 
-  const { surface, wire } = generateSurface(params.R, params.M);
+  const { surface, wires } = generateSurface(params.R, params.M);
   surfaceMesh = surface;
-  wireMesh = wire;
-  scene.add(surfaceMesh);
-  scene.add(wireMesh);
+  wireMesh = wires;
 
-  const scaleFactor = Math.sqrt(1.5*params.R);
+  scene.add(surfaceMesh);
+  for (const mesh of wireMesh) scene.add(mesh);
+
+  const scaleFactor = Math.sqrt(params.R + 1);
   sphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
 }
 
