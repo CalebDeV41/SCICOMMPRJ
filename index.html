@@ -30,7 +30,7 @@
     const sphereGeom = new THREE.SphereGeometry(1, 64, 64);
     const sphereMat = new THREE.MeshBasicMaterial({color: 0xff0000, roughness: 0.5, metalness: 0.1});
     const sphere = new THREE.Mesh(sphereGeom, sphereMat);
-    sphere.position.set(0, 0, 10);
+    sphere.position.set(0, 0, 8);
     scene.add(sphere);
 
     const params = { R: 60, M: 2500 };
@@ -53,7 +53,7 @@
 
 function generateSurface(R, M) {
   // High-res smooth surface
-  const smoothGeometry = new THREE.PlaneGeometry(400, 400, 400, 400);
+  const smoothGeometry = new THREE.PlaneGeometry(600, 600, 400, 400);
   applyCurvature(smoothGeometry, R, M);
 
   const shadedMat = new THREE.MeshNormalMaterial({
@@ -63,7 +63,7 @@ function generateSurface(R, M) {
   const surface = new THREE.Mesh(smoothGeometry, shadedMat);
 
   // Low-res grid overlay
-  const gridGeometry = new THREE.PlaneGeometry(400, 400, 50, 50);
+  const gridGeometry = new THREE.PlaneGeometry(600, 600, 50, 50);
   applyCurvature(gridGeometry, R, M);
 
   const wireMat = new THREE.MeshBasicMaterial({
@@ -95,7 +95,7 @@ function updateSurface() {
   scene.add(surfaceMesh);
   scene.add(wireMesh);
 
-  const scaleFactor = 2*Math.sqrt(params.R + 1);
+  const scaleFactor = Math.sqrt(2*params.R);
   sphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
 }
 
