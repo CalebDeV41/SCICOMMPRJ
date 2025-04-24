@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Embedding Diagram</title>
+  <title>Relativistic Embedding Diagram</title>
   <style>
     body { margin: 0; overflow: hidden; background: black; }
     canvas { display: block; }
@@ -14,11 +14,15 @@
     import { OrbitControls } from 'https://esm.run/three/examples/jsm/controls/OrbitControls';
     import GUI from 'https://esm.run/lil-gui';
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000); // Black background
+    // Constants in km and Pg units
+    const G = 6.67430e-20;      // km³ / (Pg * s²)
+    const c = 299792.458;       // km/s
 
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 0, 50);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+    camera.position.set(0, 0, 500);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -28,40 +32,64 @@
     controls.enableDamping = true;
 
     const sphereGeom = new THREE.SphereGeometry(1, 64, 64);
-    const sphereMat = new THREE.MeshBasicMaterial({color: 0xff0000, roughness: 0.5, metalness: 0.1});
+    const sphereMat = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.5, metalness: 0.1 });
     const sphere = new THREE.Mesh(sphereGeom, sphereMat);
-    sphere.position.set(0, 0, 10);
     scene.add(sphere);
 
-    const params = { R: 6, M: 25 };
+    const light = new THREE.PointLight(0xffffff, 1);
+    light.position.set(500, 500, 1000);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x404040));
+
+    const params = { 
+      M: 5.972e9,     // Mass in Pg (Earth mass)
+      R_obj: 6371,    // Radius in km (Earth radius)
+      scaleZ: 500     // Vertical exaggeration
+    };
+
     let surfaceMesh, wireMesh;
 
-    function generateSurface(R, M) {
-      const geometry = new THREE.PlaneGeometry(400, 400, 400, 400); // high res
+    function generateSurface(M, R_obj, scaleZ) {
+      const gridSize = 400;
+      const segments = 400;
+      const geometry = new THREE.PlaneGeometry(gridSize, gridSize, segments, segments);
       const posAttr = geometry.attributes.position;
+
+      const Rs = (2 * G * M) / (c * c);
 
       for (let i = 0; i < posAttr.count; i++) {
         const x = posAttr.getX(i);
         const y = posAttr.getY(i);
-        const denom = (x**2 + y**2)/(R**2) + (Math.sqrt(R)/(M));
-        const z = -1 / denom;
-        posAttr.setZ(i, z);
+        const r = Math.sqrt(x * x + y * y);
+
+        let dzdr = 0;
+
+        if (R_obj <= Rs) {
+          // Black hole: Only exterior solution starting at Rs
+          if (r >= Rs) {
+            dzdr = Math.sqrt((2 * G * M) / (c * c * r - 2 * G * M));
+          } else {
+            dzdr = 0;  // Inside event horizon is undefined, flatten it
+          }
+        } else {
+          if (r >= R_obj) {
+            dzdr = Math.sqrt((2 * G * M) / (c * c * r - 2 * G * M));
+          } else {
+            const interiorTerm = 1 - (2 * G * M * r * r) / (c * c * Math.pow(R_obj, 3));
+            dzdr = Math.sqrt(1 / interiorTerm - 1);
+          }
+        }
+
+        // Approximate integration by summing dzdr * dr
+        const z = scaleZ * dzdr;
+        posAttr.setZ(i, isFinite(z) ? -z : 0);
       }
 
       posAttr.needsUpdate = true;
       geometry.computeVertexNormals();
 
-      const shadedMat = new THREE.MeshNormalMaterial({
-        side: THREE.DoubleSide,
-        flatShading: false,
-      });
-
-      const wireMat = new THREE.MeshBasicMaterial({
-        color: 0x222222,
-        wireframe: true,
-        opacity: 0.6,
-        transparent: true,
-      });
+      const shadedMat = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide, flatShading: false });
+      const wireMat = new THREE.MeshBasicMaterial({ color: 0x222222, wireframe: true, opacity: 0.6, transparent: true });
 
       const surface = new THREE.Mesh(geometry, shadedMat);
       const wire = new THREE.Mesh(geometry, wireMat);
@@ -80,20 +108,24 @@
         wireMesh.material.dispose();
       }
 
-      const { surface, wire } = generateSurface(params.R, params.M);
+      const { surface, wire } = generateSurface(params.M, params.R_obj, params.scaleZ);
       surfaceMesh = surface;
       wireMesh = wire;
       scene.add(surfaceMesh);
       scene.add(wireMesh);
-      const scaleFactor = Math.sqrt(params.R + 1);
+
+      const Rs = (2 * G * params.M) / (c * c);
+      const sphereRadius = (params.R_obj <= Rs) ? Rs : params.R_obj;
+      const scaleFactor = sphereRadius / 50;  // Adjust visual scaling
       sphere.scale.set(scaleFactor, scaleFactor, scaleFactor);
     }
 
-    updateSurface();
-
     const gui = new GUI();
-    gui.add(params, 'R', 1, 1000).onChange(updateSurface);
-    gui.add(params, 'M', 250, 10000).onChange(updateSurface);
+    gui.add(params, 'M', 1e6, 1e12).name('Mass (Pg)').onChange(updateSurface);
+    gui.add(params, 'R_obj', 1, 1e5).name('Radius (km)').onChange(updateSurface);
+    gui.add(params, 'scaleZ', 100, 1000).name('Vertical Scale').onChange(updateSurface);
+
+    updateSurface();
 
     function animate() {
       requestAnimationFrame(animate);
